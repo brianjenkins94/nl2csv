@@ -99,21 +99,20 @@ async function scrape(url, options = {}) {
 		// @ts-expect-error
 		await video.click({ "button": "middle" });
 
+		const popup = await popupPromise;
+
+		await popup.evaluate(function() {
+			document.getElementById("movie_player").remove();
+		});
+
+		const title = await popup.locator("css=ytd-rich-grid-renderer > #contents > ytd-rich-grid-row > #contents > ytd-rich-item-renderer > #content > ytd-rich-grid-media > #dismissible > #details > #meta > h3").first().innerText();
 		let game;
 		let year;
 
-		const popup = await popupPromise;
-
-		await new Promise<void>(async function(resolve, reject) {
-			try {
-				game = await popup.locator("css=#primary #below > ytd-watch-metadata #endpoint-link > #text-container > #title").first().innerText();
-				year = await popup.locator("css=#primary #below > ytd-watch-metadata #endpoint-link > #text-container > #subtitle").innerText();
-			} catch (error) { }
-
-			resolve();
-		});
-
-		const title = await page.locator("css=ytd-rich-grid-renderer > #contents > ytd-rich-grid-row > #contents > ytd-rich-item-renderer > #content > ytd-rich-grid-media > #dismissible > #details > #meta > h3").first().innerText();
+		try {
+			game = await popup.locator("css=#primary #below > ytd-watch-metadata #endpoint-link > #text-container > #title").first().innerText();
+			year = await popup.locator("css=#primary #below > ytd-watch-metadata #endpoint-link > #text-container > #subtitle").first().innerText();
+		} catch (error) { }
 
 		await popup.close();
 
