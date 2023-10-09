@@ -6,6 +6,7 @@
   "author": "Brian Jenkins",
   "license": "MIT",
   "scripts": {
+    "codegen": "npx playwright codegen",
     "cdp": "node -e \"require(\\\"child_process\\\").spawn(process.platform === \\\"win32\\\" ? path.join(process.env[\\\"ProgramW6432\\\"], \\\"Google\\\", \\\"Chrome\\\", \\\"Application\\\", \\\"chrome.exe\\\") : path.join(\\\"/\\\", \\\"Applications\\\", \\\"Google Chrome.app\\\", \\\"Contents\\\", \\\"MacOS\\\", \\\"Google Chrome\\\"), [\\\"--remote-debugging-port=9222\\\", \\\"--restore-last-session\\\"], { \\\"detached\\\": true }); process.exit(0);\"",
     "start": "node --experimental-specifier-resolution=node --loader=ts-node/esm scraper.ts",
     "test": "echo \"Error: no test specified\""
