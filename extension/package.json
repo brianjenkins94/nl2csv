@@ -1,0 +1,29 @@
+{
+  "name": "sidepanel",
+  "version": "0.0.0",
+  "description": "",
+  "type": "module",
+  "author": "Brian Jenkins",
+  "license": "MIT",
+  "scripts": {
+    "start": "vite build src --watch"
+  },
+  "devDependencies": {
+    "@crxjs/vite-plugin": "^2.0.0-beta.18",
+    "@types/chrome": "latest",
+    "@types/react": "latest",
+    "@typescript-eslint/eslint-plugin": "latest",
+    "@typescript-eslint/parser": "latest",
+    "eslint": "latest",
+    "http-proxy": "latest",
+    "node-stdlib-browser": "latest",
+    "tsup": "latest",
+    "typescript": "latest",
+    "vite": "latest"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "sideEffects": false
+}

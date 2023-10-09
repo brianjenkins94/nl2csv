@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "background": {
+    "service_worker": "sw.ts",
+    "type": "module"
+  },
+  "permissions": [
+    "activeTab",
+    "contextMenus",
+    "scripting",
+    "sidePanel",
+    "storage",
+    "tabs"
+  ],
+  "icons": {
+    "128": "assets/icons/128.png"
+  },
+  "options_ui": {
+    "page": "pages/options/index.html",
+    "open_in_tab": false
+  },
+  "side_panel": {
+    "default_path": "pages/sidepanel/index.html"
+  }
+}

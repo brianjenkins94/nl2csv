@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+	<!-- Metadata -->
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<meta name="description" content="" />
+
+	<!-- Title -->
+	<title></title>
+
+	<!-- Libraries -->
+	<!-- <link rel="stylesheet" href="/assets/vendor/bootstrap/5.3.1/css/bootstrap.min.css" /> -->
+
+	<!-- Stylesheets -->
+	<!-- <link rel="stylesheet" href="/css/style.css" /> -->
+
+</head>
+<body class="bg-light">
+	<div class="container">
+		<div class="row">
+			<div class="col-md-8 order-md-1 mt-3">
+				<h4 class="mb-3">Billing address</h4>
+
+				<form class="needs-validation" novalidate="">
+					<div class="row">
+						<div class="col-md-6 mb-3">
+							<label for="firstName">First name</label>
+							<input type="text" class="form-control" id="firstName" placeholder="" value="" required="">
+							<div class="invalid-feedback">
+								Valid first name is required.
+							</div>
+						</div>
+
+						<div class="col-md-6 mb-3">
+							<label for="lastName">Last name</label>
+							<input type="text" class="form-control" id="lastName" placeholder="" value="" required="">
+							<div class="invalid-feedback">
+								Valid last name is required.
+							</div>
+						</div>
+					</div>
+
+					<button class="btn btn-primary btn-lg btn-block" type="submit">Continue to checkout</button>
+				</form>
+			</div>
+		</div>
+
+		<footer class="my-5 pt-5 text-muted text-center text-small">
+			<p class="mb-1"></p>
+		</footer>
+	</div>
+
+	<!-- Libraries -->
+	<!-- <script src="/assets/vendor/bootstrap/5.3.1/js/bootstrap.bundle.min.js"></script> -->
+
+	<!-- Scripts -->
+	<script type="module" src="index.ts"></script>
+
+</body>
+</html>
