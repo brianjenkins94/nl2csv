@@ -1,12 +1,8 @@
 import { promises as fs } from "fs";
 import * as path from "path";
-import * as url from "url";
 import { Browser, BrowserContext, Page, chromium } from "playwright-chromium";
 
-const __filename = url.fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-export const __root = __dirname;
+import { __root } from "./config";
 
 let isCDPSession = false;
 

@@ -15,9 +15,6 @@
     "@typescript-eslint/eslint-plugin": "latest",
     "@typescript-eslint/parser": "latest",
     "eslint": "latest",
-    "http-proxy": "latest",
-    "node-stdlib-browser": "latest",
-    "tsup": "latest",
     "typescript": "latest",
     "vite": "latest"
   },
