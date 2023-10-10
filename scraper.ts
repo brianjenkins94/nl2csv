@@ -1,4 +1,4 @@
-import { promises as fs } from "fs";
+import { existsSync, promises as fs } from "fs";
 import * as path from "path";
 import { Browser, BrowserContext, Page, chromium } from "playwright-chromium";
 import Papa from "papaparse";
@@ -6,6 +6,8 @@ import Papa from "papaparse";
 import { __root } from "./config";
 import { querySelector, querySelectorAll } from "./util/querySelector";
 import { sleep } from "./util/sleep";
+
+const isWindows = process.platform === "win32";
 
 let isCDPSession = false;
 
@@ -20,7 +22,42 @@ async function attach(options = {}) {
 
 		isCDPSession = true;
 	} catch (error) {
-		browser = await chromium.launch(options);
+		const args = options["args"] ?? [];
+
+		try {
+			const extensionBasePath = path.join(isWindows ? path.join(process.env["LOCALAPPDATA"]) : path.join(process.env["HOME"] + "Library", "Application Support"), "Google", "Chrome", "User Data", "Default", "Extensions", "cjpalhdlnbpafiamejdnhcphjbkeiagm");
+
+			const latestVersion = (await Promise.all((await fs.readdir(extensionBasePath))
+				.map(async function(fileName) {
+					return {
+						"name": fileName,
+						"ctime": (await fs.stat(path.join(extensionBasePath, fileName))).ctime
+					};
+				})))
+				.sort(function(a, b) {
+					return b.ctime.getTime() - a.ctime.getTime();
+				})[0].name;
+
+			const pathToExtension = path.join(extensionBasePath, latestVersion);
+
+			if (options["headless"] === true) {
+				args.push("--headless=new");
+			}
+
+			args.push(
+				`--disable-extensions-except=${pathToExtension}`,
+				`--load-extension=${pathToExtension}`
+			);
+
+			return {
+				"contexts": [await chromium.launchPersistentContext("", {
+					"args": args,
+					...options
+				})]
+			};
+		} catch (error) {
+			browser = await chromium.launch(options);
+		}
 	}
 
 	let contexts = browser.contexts();
@@ -53,10 +90,12 @@ async function scrape(url, options = {}) {
 
 	const outputFile = path.join(outputDirectory, "results.csv");
 
-	await fs.writeFile(outputFile, Papa.unparse([["date", "title", "game", "year"]]) + "\n");
+	await fs.writeFile(outputFile, Papa.unparse([["date", "title", "url", "game", "year"]], {
+		"quotes": true
+	}) + "\n");
 
 	page.route("**/*", function(route) {
-		return [/* "image", "stylesheet", */ "media", "font", "imageset"].includes(route.request().resourceType())
+		return ["image", "stylesheet", "media", "font", "imageset"].includes(route.request().resourceType())
 			? route.abort()
 			: route.continue();
 	});
@@ -114,8 +153,11 @@ async function scrape(url, options = {}) {
 
 		await popup.locator("css=#primary #below > ytd-watch-metadata > #above-the-fold > #bottom-row > #description").click();
 
+		popup.setDefaultTimeout(5000);
+
 		const date = await popup.locator("css=#primary #below > ytd-watch-metadata > #above-the-fold > #bottom-row > #description #info-container > yt-formatted-string > span:last-child").innerText();
 		const title = await popup.locator("css=#primary #below > ytd-watch-metadata > #above-the-fold > #title").innerText();
+		const url = popup.url();
 		let game;
 		let year;
 
@@ -129,9 +171,13 @@ async function scrape(url, options = {}) {
 		await fs.appendFile(outputFile, Papa.unparse([{
 			"date": date.trim(),
 			"title": title.trim(),
-			"game": game.trim(),
-			"year": year.trim()
-		}], { "header": false }) + "\n");
+			"url": url.trim(),
+			"game": game?.trim(),
+			"year": year?.trim()
+		}], {
+			"header": false,
+			"quotes": true
+		}) + "\n");
 	}
 
 	// </>
