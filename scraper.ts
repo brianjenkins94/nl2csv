@@ -1,6 +1,7 @@
 import { promises as fs } from "fs";
 import * as path from "path";
 import { Browser, BrowserContext, Page, chromium } from "playwright-chromium";
+import Papa from "papaparse";
 
 import { __root } from "./config";
 import { querySelector, querySelectorAll } from "./util/querySelector";
@@ -49,6 +50,10 @@ async function scrape(url, options = {}) {
 	await page.waitForLoadState("networkidle");
 
 	// Prep work
+
+	const outputFile = path.join(outputDirectory, "results.csv");
+
+	await fs.writeFile(outputFile, Papa.unparse([["date", "title", "game", "year"]]) + "\n");
 
 	page.route("**/*", function(route) {
 		return [/* "image", "stylesheet", */ "media", "font", "imageset"].includes(route.request().resourceType())
@@ -102,10 +107,15 @@ async function scrape(url, options = {}) {
 		const popup = await popupPromise;
 
 		await popup.evaluate(function() {
-			document.getElementById("movie_player").remove();
+			setInterval(function() {
+				document.getElementById("movie_player")?.remove();
+			}, 100);
 		});
 
-		const title = await popup.locator("css=ytd-rich-grid-renderer > #contents > ytd-rich-grid-row > #contents > ytd-rich-item-renderer > #content > ytd-rich-grid-media > #dismissible > #details > #meta > h3").first().innerText();
+		await popup.locator("css=#primary #below > ytd-watch-metadata > #above-the-fold > #bottom-row > #description").click();
+
+		const date = await popup.locator("css=#primary #below > ytd-watch-metadata > #above-the-fold > #bottom-row > #description #info-container > yt-formatted-string > span:last-child").innerText();
+		const title = await popup.locator("css=#primary #below > ytd-watch-metadata > #above-the-fold > #title").innerText();
 		let game;
 		let year;
 
@@ -116,11 +126,12 @@ async function scrape(url, options = {}) {
 
 		await popup.close();
 
-		console.log({
-			"title": title,
-			"game": game,
-			"year": year
-		});
+		await fs.appendFile(outputFile, Papa.unparse([{
+			"date": date.trim(),
+			"title": title.trim(),
+			"game": game.trim(),
+			"year": year.trim()
+		}], { "header": false }) + "\n");
 	}
 
 	// </>
