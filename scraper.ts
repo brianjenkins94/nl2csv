@@ -75,6 +75,59 @@ async function attach(options = {}) {
 let browser: Browser;
 let context: BrowserContext;
 
+async function retry(video) {
+	let popup;
+
+	let date;
+	let title;
+	let url;
+	let game;
+	let year;
+
+	try {
+		const popupPromise = context.waitForEvent("page");
+
+		await video.click({ "button": "middle" });
+
+		popup = await popupPromise;
+
+		await popup.evaluate(function() {
+			setInterval(function() {
+				document.getElementById("movie_player")?.remove();
+			}, 100);
+		});
+
+		await popup.locator("css=#primary #below > ytd-watch-metadata > #above-the-fold > #bottom-row > #description").click();
+
+		popup.setDefaultTimeout(5000);
+
+		date = await popup.locator("css=#primary #below > ytd-watch-metadata > #above-the-fold > #bottom-row > #description #info-container > yt-formatted-string > span:last-child").innerText();
+		title = await popup.locator("css=#primary #below > ytd-watch-metadata > #above-the-fold > #title").innerText();
+		url = popup.url();
+
+		try {
+			game = await popup.locator("css=#primary #below > ytd-watch-metadata #endpoint-link > #text-container > #title").first().innerText();
+			year = await popup.locator("css=#primary #below > ytd-watch-metadata #endpoint-link > #text-container > #subtitle").first().innerText();
+		} catch (error) { }
+
+		await popup.close();
+	} catch (error) {
+		console.log(error);
+
+		await popup?.close();
+
+		return retry(video);
+	}
+
+	return {
+		"date": date.trim(),
+		"title": title.trim(),
+		"url": url.trim(),
+		"game": game?.trim() || undefined,
+		"year": year?.trim() || undefined
+	};
+}
+
 async function scrape(url, options = {}) {
 	if (browser === undefined) {
 		({ browser, "contexts": [context] } = await attach(options));
@@ -128,6 +181,7 @@ async function scrape(url, options = {}) {
 			element.scrollIntoView(true);
 		});
 
+		// THIS CAN CAUSE AN INFINITE LOOP
 		await (function(locator) {
 			return new Promise<void>(function recurse(resolve, reject) {
 				setTimeout(function() {
@@ -138,43 +192,10 @@ async function scrape(url, options = {}) {
 			});
 		})(loadingIndicator);
 
-		const popupPromise = context.waitForEvent("page");
+		// THIS CAN CAUSE AN INFINITE LOOP
+		const result = await retry(video);
 
-		// @ts-expect-error
-		await video.click({ "button": "middle" });
-
-		const popup = await popupPromise;
-
-		await popup.evaluate(function() {
-			setInterval(function() {
-				document.getElementById("movie_player")?.remove();
-			}, 100);
-		});
-
-		await popup.locator("css=#primary #below > ytd-watch-metadata > #above-the-fold > #bottom-row > #description").click();
-
-		popup.setDefaultTimeout(5000);
-
-		const date = await popup.locator("css=#primary #below > ytd-watch-metadata > #above-the-fold > #bottom-row > #description #info-container > yt-formatted-string > span:last-child").innerText();
-		const title = await popup.locator("css=#primary #below > ytd-watch-metadata > #above-the-fold > #title").innerText();
-		const url = popup.url();
-		let game;
-		let year;
-
-		try {
-			game = await popup.locator("css=#primary #below > ytd-watch-metadata #endpoint-link > #text-container > #title").first().innerText();
-			year = await popup.locator("css=#primary #below > ytd-watch-metadata #endpoint-link > #text-container > #subtitle").first().innerText();
-		} catch (error) { }
-
-		await popup.close();
-
-		await fs.appendFile(outputFile, Papa.unparse([{
-			"date": date.trim(),
-			"title": title.trim(),
-			"url": url.trim(),
-			"game": game?.trim(),
-			"year": year?.trim()
-		}], {
+		await fs.appendFile(outputFile, Papa.unparse([result], {
 			"header": false,
 			"quotes": true
 		}) + "\n");
