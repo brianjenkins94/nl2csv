@@ -101,7 +101,7 @@ async function retry(video) {
 
 		popup.setDefaultTimeout(5000);
 
-		date = await popup.locator("css=#primary #below > ytd-watch-metadata > #above-the-fold > #bottom-row > #description #info-container > yt-formatted-string > span:last-child").innerText();
+		date = await popup.locator("css=#primary #below > ytd-watch-metadata > #above-the-fold > #bottom-row > #description #info-container > yt-formatted-string > span:nth-child(3)").innerText();
 		title = await popup.locator("css=#primary #below > ytd-watch-metadata > #above-the-fold > #title").innerText();
 		url = popup.url();
 
@@ -143,9 +143,11 @@ async function scrape(url, options = {}) {
 
 	const outputFile = path.join(outputDirectory, "results.csv");
 
-	await fs.writeFile(outputFile, Papa.unparse([["date", "title", "url", "game", "year"]], {
-		"quotes": true
-	}) + "\n");
+	//await fs.writeFile(outputFile, Papa.unparse([["date", "title", "url", "game", "year"]], {
+	//  "quotes": true
+	//}) + "\n");
+
+	const file = await fs.readFile(outputFile, { "encoding": "utf8" });
 
 	page.route("**/*", function(route) {
 		return ["image", "stylesheet", "media", "font", "imageset"].includes(route.request().resourceType())
@@ -173,7 +175,9 @@ async function scrape(url, options = {}) {
 
 	// Actual scraping logic
 
-	const loadingIndicator = page.locator("css=ytd-rich-grid-renderer > #contents > ytd-continuation-item-renderer > tp-yt-paper-spinner");
+	const loadingIndicator = page.locator("css=ytd-rich-grid-renderer > #contents > ytd-continuation-item-renderer > tp-yt-paper-spinner").last();
+
+	let count = 0;
 
 	for await (const video of $$("ytd-rich-grid-renderer > #contents > ytd-rich-grid-row > #contents > ytd-rich-item-renderer > #content > ytd-rich-grid-media > #dismissible")) {
 		// @ts-expect-error
@@ -181,16 +185,36 @@ async function scrape(url, options = {}) {
 			element.scrollIntoView(true);
 		});
 
+		count += 1;
+		console.log(count);
+
 		// THIS CAN CAUSE AN INFINITE LOOP
-		await (function(locator) {
-			return new Promise<void>(function recurse(resolve, reject) {
-				setTimeout(function() {
-					if (locator.getAttribute("active") !== null) {
+		await (function recurse(locator) {
+			return new Promise<void>(function(resolve, reject) {
+				//try {
+				if (locator.getAttribute("active") !== null) {
+					console.log("✅");
+
+					resolve();
+				} else {
+					console.log("❌");
+
+					setTimeout(async function() {
+						await recurse(locator);
+
 						resolve();
-					}
-				}, 2000);
+					}, 2000);
+				}
+				//} catch (error) {
+				//  resolve();
+				//}
 			});
 		})(loadingIndicator);
+
+		// @ts-expect-error
+		if (file.includes(await (await video.$("#details > #meta #video-title-link")).getAttribute("href"))) {
+			continue;
+		}
 
 		// THIS CAN CAUSE AN INFINITE LOOP
 		const result = await retry(video);
