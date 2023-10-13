@@ -22,7 +22,9 @@ async function attach(options = {}) {
 
 		isCDPSession = true;
 	} catch (error) {
-		const args = options["args"] ?? [];
+		const args = options["args"] ?? [
+			`--js-flags=--expose-gc`
+		];
 
 		try {
 			const extensionBasePath = path.join(isWindows ? path.join(process.env["LOCALAPPDATA"]) : path.join(process.env["HOME"] + "Library", "Application Support"), "Google", "Chrome", "User Data", "Default", "Extensions", "cjpalhdlnbpafiamejdnhcphjbkeiagm");
@@ -87,7 +89,10 @@ async function retry(video) {
 	try {
 		const popupPromise = context.waitForEvent("page");
 
-		await video.click({ "button": "middle" });
+		await video.click({
+			"button": "middle",
+			"force": true
+		});
 
 		popup = await popupPromise;
 
@@ -188,28 +193,35 @@ async function scrape(url, options = {}) {
 		count += 1;
 		console.log(count);
 
-		// THIS CAN CAUSE AN INFINITE LOOP
+		// This loading indicator check has problems
 		await (function recurse(locator) {
 			return new Promise<void>(function(resolve, reject) {
-				//try {
-				if (locator.getAttribute("active") !== null) {
-					console.log("✅");
-
-					resolve();
-				} else {
-					console.log("❌");
-
-					setTimeout(async function() {
-						await recurse(locator);
+				try {
+					if (locator.getAttribute("active") !== null) {
+						console.log("✅");
 
 						resolve();
-					}, 2000);
+					} else {
+						console.log("❌");
+
+						setTimeout(async function() {
+							await recurse(locator);
+
+							resolve();
+						}, 2000);
+					}
+				} catch (error) {
+					resolve();
 				}
-				//} catch (error) {
-				//  resolve();
-				//}
 			});
 		})(loadingIndicator);
+
+		// @ts-expect-error
+		await video.evaluate(function(element) {
+			element.parentNode.parentNode.parentNode.style.display = "none";
+
+			gc?.();
+		});
 
 		// @ts-expect-error
 		if (file.includes(await (await video.$("#details > #meta #video-title-link")).getAttribute("href"))) {
