@@ -22,7 +22,7 @@ async function attach(options = {}) {
 
 		isCDPSession = true;
 	} catch (error) {
-		const args = options["args"] ?? [
+		options["args"] ??= [
 			`--js-flags=--expose-gc`
 		];
 
@@ -41,6 +41,8 @@ async function attach(options = {}) {
 				})[0].name;
 
 			const pathToExtension = path.join(extensionBasePath, latestVersion);
+
+			const args = options["args"];
 
 			if (options["headless"] === true) {
 				args.push("--headless=new");
@@ -180,9 +182,9 @@ async function scrape(url, options = {}) {
 
 	// Actual scraping logic
 
-	const loadingIndicator = page.locator("css=ytd-rich-grid-renderer > #contents > ytd-continuation-item-renderer > tp-yt-paper-spinner").last();
-
 	let count = 0;
+
+	const loadingIndicator = page.locator("css=ytd-rich-grid-renderer > #contents > ytd-continuation-item-renderer > tp-yt-paper-spinner").last();
 
 	for await (const video of $$("ytd-rich-grid-renderer > #contents > ytd-rich-grid-row > #contents > ytd-rich-item-renderer > #content > ytd-rich-grid-media > #dismissible")) {
 		// @ts-expect-error
@@ -193,25 +195,20 @@ async function scrape(url, options = {}) {
 		count += 1;
 		console.log(count);
 
-		// This loading indicator check has problems
 		await (function recurse(locator) {
-			return new Promise<void>(function(resolve, reject) {
-				try {
-					if (locator.getAttribute("active") !== null) {
-						console.log("✅");
+			return new Promise<void>(async function(resolve, reject) {
+				if (await locator.getAttribute("active") === null) {
+					console.log("✅");
+
+					resolve();
+				} else {
+					console.log("❌");
+
+					setTimeout(async function() {
+						await recurse(locator);
 
 						resolve();
-					} else {
-						console.log("❌");
-
-						setTimeout(async function() {
-							await recurse(locator);
-
-							resolve();
-						}, 2000);
-					}
-				} catch (error) {
-					resolve();
+					}, 2000);
 				}
 			});
 		})(loadingIndicator);
@@ -219,9 +216,13 @@ async function scrape(url, options = {}) {
 		// @ts-expect-error
 		await video.evaluate(function(element) {
 			element.parentNode.parentNode.parentNode.style.display = "none";
-
-			gc?.();
 		});
+
+		if (count % 100 === 0) {
+			await page.evaluate(function() {
+				gc?.();
+			});
+		}
 
 		// @ts-expect-error
 		if (file.includes(await (await video.$("#details > #meta #video-title-link")).getAttribute("href"))) {
